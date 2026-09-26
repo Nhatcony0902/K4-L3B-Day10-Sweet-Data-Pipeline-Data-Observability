@@ -112,31 +112,45 @@ python -c "from core.config import load_settings; from observability.quality imp
 
 ## 8. Phân tích kết quả
 
-> Chờ `phase1.py` và `corruption_flow.py` (Trần Xuân Đức) chạy xong để lấy số liệu thật — không điền trước.
+Nguồn: `data/results/{baseline,corrupted,repaired}_metrics.json`, `data/quality/{baseline,corrupted,repaired}_quality_report.json`, `data/results/corruption_log.json` (lượt chạy 2026-09-26 của Trần Xuân Đức; judge Ollama `qwen2.5:3b`). Góc nhìn của mình: owner của quality gate và freshness — đánh giá lớp observability đã bắt được gì và bỏ sót gì.
 
 ### Metrics chính
 
 | Metric/signal          | Baseline | Corrupted | Repaired | Nhận xét của cá nhân |
 | ---------------------- | -------: | --------: | -------: | ------------------------- |
-| `retrieval_hit_rate` |      [ ] |       [ ] |      [ ] | [Nhận xét]              |
-| `mean_token_f1`      |      [ ] |       [ ] |      [ ] | [Nhận xét]              |
-| `judge_accuracy`     |      [ ] |       [ ] |      [ ] | [Nhận xét]              |
-| `mean_judge_score`   |      [ ] |       [ ] |      [ ] | [Nhận xét]              |
-| Quality checks         |      [ ] |       [ ] |      [ ] | [Nhận xét]              |
-| Freshness status       |      [ ] |       [ ] |      [ ] | [Nhận xét]              |
+| `retrieval_hit_rate` | 1.00 | 0.50 | 1.00 | Giảm một nửa trong khi pipeline vẫn exit 0 — đây là thiệt hại mà quality gate phải báo trước |
+| `mean_token_f1`      | 1.00 | 0.727 | 1.00 | Giảm ít hơn Hit Rate: có câu vẫn đúng tình cờ từ paper sai (`eval_002`: F1 = 1.0 nhưng hit = False) |
+| `judge_accuracy`     | 0.70 | 0.40 | 0.60 | Repaired ≠ baseline dù dữ liệu giống hệt → nhiễu của judge 3B, không dùng làm bằng chứng về dữ liệu |
+| `mean_judge_score`   | 3.6 | 2.9 | 3.7 | Như trên |
+| Quality checks         | PASS 6/6 | FAIL 4/6 | PASS 6/6 | Fail `paper_id` unique (4 dòng) và `summary` length (3 dòng) |
+| Freshness status       | PASS (1/24 = 0.042) | PASS (5/21 = 0.238) | PASS (1/24 = 0.042) | Stale ratio tăng gần 6 lần nhưng vẫn dưới ngưỡng 0.25 → không cảnh báo |
+
+**Độ phủ của quality gate trên 6 kịch bản corruption:**
+
+| Corruption (số dòng) | Tín hiệu bắt được? | Lý do |
+|---|---|---|
+| `duplicate_rows` (2) | ✅ `expect_column_values_to_be_unique` — 4 dòng lỗi | Mỗi bản nhân đôi làm cả 2 dòng cùng `paper_id` bị tính là unexpected |
+| `blank_summary` (3) | ✅ `expect_column_value_lengths_to_be_between` — 3 dòng lỗi | Chuỗi rỗng **không phải null** nên `not_null` vẫn pass; chỉ check độ dài ≥ 30 bắt được |
+| `drop_latest_records` (5) | ❌ | 21 dòng vẫn nằm trong 5–5000; freshness chỉ đo tỷ lệ bài cũ, không đo `latest_published` (lùi từ 2026-07-22 về 2026-06-11) |
+| `stale_date` (4) | ❌ | 5/21 = 0.238 < 0.25; cần thêm 1 dòng stale (6/21 = 0.286) mới FAIL |
+| `truncate_title` (3) | ❌ | Title 7 ký tự vẫn not-null, không có check độ dài title |
+| `inject_noise` (3) | ❌ | Summary có noise vẫn dài ≥ 30 ký tự |
+
+→ Gate bắt được **2/6** loại lỗi, và bỏ sót đúng loại gây thiệt hại lớn nhất.
 
 ### Kết luận từ số liệu
 
-1. [Data corruption] → [quality/freshness signal thay đổi] → [agent metric thay đổi].
-2. [Repair action] → [quality/freshness signal phục hồi] → [agent metric phục hồi hoặc chưa phục hồi].
+1. **Duplicate + blank summary** → GX gate PASS → FAIL (unique: 4 dòng, summary length: 3 dòng) → gate phát hiện đúng sự cố dù agent vẫn trả lời đủ 10/10 câu; song song đó **drop 5 bài mới nhất** → không check nào FAIL → `retrieval_hit_rate` 1.0 → 0.5 (cả 5 câu miss `eval_001`–`eval_005` đều hỏi về 5 bài bị drop).
+2. **Repair từ `data/raw/crossref_records.json` bằng chính `build_clean_dataframe`** → GX PASS 6/6, stale ratio về 0.042, dataset repaired giống hệt baseline (24 dòng, so sánh mọi cột trừ `age_days`) → `retrieval_hit_rate` và `mean_token_f1` phục hồi 100%; judge metrics không về đúng baseline do nhiễu của judge, không do dữ liệu.
 
 Corruption nào ảnh hưởng rõ nhất và vì sao?
 
-[Phân tích dựa trên số liệu.]
+`drop_latest_records`: toàn bộ 5/5 lượt retrieval miss đến từ đây vì test set được sinh từ các bài mới nhất. Với vai trò owner quality gate, điểm đáng chú ý là đây lại là lỗi **không có tín hiệu nào báo**: row count check có biên quá rộng (5–5000) so với quy mô 24 dòng, còn freshness dạng tỷ lệ lại **tăng** khi mất bài mới (mẫu số giảm) nhưng vẫn chưa chạm ngưỡng. Hai lỗi mà gate bắt được (duplicate, blank summary) rơi vào các paper ngoài test set hoặc không làm miss retrieval.
 
 Kết quả nào khác với kỳ vọng ban đầu?
 
-[Nêu kết quả, giả thuyết và cách đã kiểm tra.]
+- Kỳ vọng `stale_date` làm freshness FAIL; thực tế 0.238, sát ngưỡng 0.25. Kiểm tra `corrupted_quality_report.json`: `stale_rows = 5` (4 dòng bị lùi 365 ngày + 1 dòng vốn đã 182 ngày), `total_rows = 21`. Kết luận: một ngưỡng tỷ lệ duy nhất dễ bị "vừa dưới ngưỡng"; cần thêm tín hiệu tuyệt đối như `latest_published` so với lần chạy trước.
+- Kỳ vọng `not_null` bắt được summary rỗng; thực tế không, vì chuỗi `""` khác `null`. Check độ dài mới là check hiệu quả cho completeness của text.
 
 ## 9. Điều học được và hướng cải thiện
 
