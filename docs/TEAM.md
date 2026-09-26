@@ -65,5 +65,18 @@
   - `src/ingestion/corruption.py`: 6 kịch bản làm bẩn dữ liệu.
   - `src/pipelines/phase1.py`: nối luồng baseline end-to-end (clean → index ChromaDB → eval → quality → report).
   - `src/pipelines/corruption_flow.py`: corrupted → đo suy giảm → idempotent repair → so sánh 3 trạng thái.
-- **Trạng thái:** _(cập nhật khi hoàn thành — ghi rõ phần xong / thử nghiệm / blocker)_
-- **Điều học được / Đóng góp chính:** _(tự điền)_
+- **Trạng thái:**
+  - ✅ CP2 `testset.py` — `Tín hiệu hoàn thành: Sinh được 10 câu hỏi test`; phân bổ 3 `summary` / 3 `authors` / 2 `date` / 2 `categories`, mỗi câu một paper khác nhau, câu hỏi khớp intent của `retrieval/qa.py`; artifact `data/eval/test_set.json`.
+  - ✅ CP3 `phase1.py` + `reporting.py` — `python script/run_phase1.py` exit 0: 24/24 dòng sạch, collection `papers-baseline`, Hit Rate = 1.0, Token F1 = 1.0, GX 6/6 pass, freshness 1/24 → `is_fresh = True`; artifact `data/results/baseline_metrics.json`, `data/reports/phase1_report.md`.
+  - ✅ CP4 `corruption.py` — `Tín hiệu hoàn thành: Corrupted 21 dòng` (seed 42, tái lập được): drop latest 5, blank summary 3, inject noise 3, truncate title 3, stale date 4, duplicate 2; artifact `data/results/corruption_log.json`.
+  - ✅ CP5 `corruption_flow.py` — `python script/run_corruption_flow.py` exit 0: Hit Rate 1.0 → 0.5 → 1.0, Token F1 1.0 → 0.73 → 1.0 (phục hồi 100%); GX corrupted FAIL (`paper_id` trùng, summary rỗng), repaired PASS; artifact `corrupted_metrics.json`, `repaired_metrics.json`, `data/reports/corruption_report.md`.
+  - ⚠️ Lưu ý LLM judge: chấm bằng Ollama `qwen2.5:3b` (local; Gemini free tier chỉ 20 request/ngày, không đủ 30 lượt judge), 30/30 câu được LLM chấm thật, không fallback. Judge Accuracy 0.7 → 0.4 → 0.6, Mean Judge Score 3.6 → 2.9 → 3.7. Model 3B chấm thiếu ổn định (vd. câu `date` trả lời đúng tuyệt đối vẫn bị 1 điểm vì model cho rằng năm 2026 "không hợp lệ") → dùng Hit Rate và Token F1 làm chỉ số chính, judge chỉ tham khảo.
+  - ⚠️ Freshness SLA corrupted vẫn PASS (stale ratio 0.238, sát ngưỡng 0.25) — ghi nhận trong báo cáo nhóm.
+  - ✅ Báo cáo cá nhân `report/2A202602768_TranXuanDuc.md` (chờ tự đánh dấu mục cam kết).
+  - ⏳ Commit code + artifact CP2–CP5.
+- **Báo cáo chi tiết:** `report/2A202602768_TranXuanDuc.md`
+- **Điều học được / Đóng góp chính:**
+  - Nối toàn bộ luồng Baseline → Corrupted → Repaired và báo cáo đối chiếu 3 trạng thái (bảng metric, Hit Rate theo dạng câu hỏi, quality gate, freshness, tỷ lệ phục hồi).
+  - Silent failure là có thật: pipeline RAG chạy trên dữ liệu bẩn không báo lỗi nhưng Hit Rate giảm 50% — chỉ lớp observability (GX Quality Gate) phát hiện được sự cố.
+  - Repair idempotent từ raw snapshot bất biến + dùng lại đúng hàm clean giúp khôi phục hoàn toàn, chạy lại nhiều lần vẫn cho cùng kết quả.
+  - Bộ test set phải khớp với logic nhận diện câu hỏi của hệ thống QA; nếu lệch wording, metric giảm sai lệch dù dữ liệu sạch.
