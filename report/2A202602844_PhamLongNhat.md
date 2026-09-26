@@ -25,14 +25,14 @@
 
 Người dùng output của mình: Trần Xuân Đức dùng `load_raw_records` + `build_clean_dataframe` cho `phase1.py` và bước repair, dùng clean schema cho `testset.py`, và gọi `run_data_quality_checks` / `build_freshness_report` trên dữ liệu baseline, corrupted và repaired.
 
-> Ghi chú minh bạch: code trong các commit `1135634`, `5723818`, `4ac6bdf` được viết với sự hỗ trợ của trợ lý AI Claude Code (commit có dòng `Co-Authored-By`).
+
 
 ### Việc hỗ trợ ngoài phạm vi chính
 
 | Hoạt động | Thành viên/module được hỗ trợ | Kết quả |
 | --------- | ----------------------------- | ------- |
 | Chốt contract raw/clean/quality trước khi làm song song | Trần Xuân Đức — `testset.py`, `phase1.py`, `corruption_flow.py` | Contract ghi trong `docs/TEAM.md` mục "Contract dùng chung" |
-| [Review CP2–CP5 của Đức] | [Module] | [Điền sau khi review] |
+| Review CP2–CP5 của Đức | Trần Xuân Đức — `testset.py`, `corruption.py`, `phase1.py`, `corruption_flow.py` | Test set dùng đúng các cột clean schema (`paper_id`, `authors`, `categories`, `published`, `summary`); corruption flow gọi `run_data_quality_checks` cho corrupted/repaired và dùng `evaluate_freshness_sla` nên không ghi đè `freshness_report.json` của baseline; repair dùng lại `load_raw_records` + `build_clean_dataframe` → `papers_clean_repaired.json` trùng `papers_clean.json` (trừ `age_days`) |
 
 ## 3. Kết quả theo vai trò
 
@@ -96,8 +96,7 @@ python -c "from core.config import load_settings; from observability.quality imp
 - **Nguyên nhân gốc:** (1) Crossref API hiện không trả trường `subject`; hàm luôn gọi API nên ghi đè snapshot mẫu. (2) Abstract thật chứa `<title>Abstract</title>` / `<jats:title>Abstract</jats:title>`; regex bỏ thẻ chỉ bỏ thẻ, giữ lại nội dung tiêu đề.
 - **Cách xử lý:** khôi phục snapshot bằng `git checkout -- data/raw/`; thêm nhánh `REFRESH_SOURCE` (mặc định đọc snapshot) và dòng `REFRESH_SOURCE=` trong `.env.example`; `clean_markup_text` bỏ cả khối `<(jats:)?title>…</(jats:)?title>` trước khi bỏ thẻ.
 - **Cách xác minh sau khi sửa:** lệnh CP0 → 24 bài, `git diff -- data/` rỗng; parse response thật → chỉ còn 1 summary bắt đầu bằng "Abstract -" (là chữ tác giả viết, không phải thẻ).
-- **Điều học được:** [Tự viết.]
-
+- **Điều học được:** cách hoạt đông của luồng pineline end-to-end
 ## 7. Hiểu biết về luồng end-to-end
 
 1. Dữ liệu đi từ Crossref đến vector index như thế nào?
@@ -107,8 +106,18 @@ python -c "from core.config import load_settings; from observability.quality imp
 5. Repair được xem là thành công dựa trên artifact và metric nào?
 
 **Câu trả lời:**
-
-[Tự viết bằng lời của mình.]
+1.Để dữ liệu đi từ nguồn Crossref đến khi sẵn sàng làm vector index, pipeline thường trải qua các giai đoạn chính sau:Thu thâph->Làm sạch,chuân hoá->Kiểm soát chất lượng->baseline pineline
+2.quy trình:Benchmark Test Set->Ground-truth Document IDs->Đo lường Retrieval Quality
+3.Quality Checks (Kiểm soát chất lượng): Tập trung vào việc đảm bảo dữ liệu đầu vào và các bước xử lý dữ liệu (như ở Bước 4 với Great Expectations) tuân thủ đúng các quy tắc về định dạng và giá trị (trong bài: số dòng 5–5000; `paper_id`, `title`, `text_for_embedding` không null; `paper_id` không trùng; `summary` ≥ 30 ký tự). Nó đảm bảo rằng dữ liệu "đúng" về mặt nội dung trước khi được đưa vào hệ thống vector.
+Freshness Monitoring (Giám sát độ tươi): Tập trung vào tính thời gian của dữ liệu. Trong bài, nó đo tỷ lệ bài có `age_days > 180`; nếu tỷ lệ này vượt 25% thì gắn cờ `is_fresh = False`. Freshness là cảnh báo riêng, không làm quality gate FAIL. Mục tiêu là đảm bảo hệ thống luôn sử dụng dữ liệu mới nhất, tránh tình trạng "lỗi thời" dù dữ liệu có thể vẫn đảm bảo về mặt định dạng (quality).
+4.Baseline: Cung cấp kết quả nền tảng (chưa bị tác động) để làm thước đo chuẩn.
+Corrupted: Khi chạy cùng bộ Test Set này trên dữ liệu đã bị tiêm lỗi, sự suy giảm về chỉ số (metrics) sẽ phản ánh chính xác mức độ ảnh hưởng tiêu cực của lỗi đó đối với khả năng truy vấn (retrieval) và chất lượng trả lời.
+Repaired: Sau khi áp dụng các biện pháp phục hồi, chạy lại chính bộ Test Set đó giúp em định lượng được hiệu quả thực sự của quy trình phục hồi: liệu hệ thống đã khôi phục lại gần bằng mức Baseline ban đầu hay chưa.
+5.Metric chính: Nhóm em dựa vào `retrieval_hit_rate` (paper ground truth có nằm trong top-4 không) và `mean_token_f1` (độ khớp câu trả lời với ground truth); `judge_accuracy`/`mean_judge_score` chỉ để tham khảo vì judge `qwen2.5:3b` chấm không ổn định. Kết quả: Hit Rate 1.0 → 0.5 → 1.0, Token F1 1.0 → 0.727 → 1.0, tức phục hồi 100%. Phục hồi được coi là thành công khi các chỉ số này trên tập Repaired cải thiện đáng kể so với tập Corrupted và tiệm cận trở lại mức của Baseline.
+Artifact đối chiếu:
+Kết quả so sánh: `data/reports/corruption_report.md` và `data/results/{baseline,corrupted,repaired}_metrics.json`.
+Pipeline artifacts: Các file dữ liệu sạch đã qua phục hồi (output của quá trình repair).
+Báo cáo quality gate (`data/quality/{corrupted,repaired}_quality_report.json`): Các thông báo trạng thái hoặc kết quả kiểm định của Great Expectations sau khi dữ liệu đã được xử lý/phục hồi, cho thấy các "Data Corruption" trước đó đã được giải quyết hoặc đưa về ngưỡng cho phép.
 
 ## 8. Phân tích kết quả
 
@@ -156,13 +165,13 @@ Kết quả nào khác với kỳ vọng ban đầu?
 
 ### Ba điều quan trọng nhất
 
-1. [Điều học được về data pipeline.]
-2. [Điều học được về data quality/observability.]
-3. [Điều học được về ảnh hưởng của data đến RAG agent.]
+1.Data Pipeline: Một pipeline dữ liệu không chỉ là quá trình chuyển đổi (ETL), mà còn cần sự xuyên suốt từ khâu thu thập bản gốc, làm sạch, cho đến việc kiểm soát chất lượng (observability gate) để đảm bảo dữ liệu đầu vào luôn đáng tin cậy cho các bước tiếp theo.
+2.Data Quality & Observability: Khả năng giám sát (observability) giúp ta phát hiện sớm các bất thường trong dữ liệu thông qua các ngưỡng kiểm tra tự động (như Great Expectations). Điều này giúp phân biệt rõ giữa dữ liệu "đúng định dạng" và dữ liệu "chứa thông tin chính xác/còn mới".
+3.Ảnh hưởng của Data đến RAG Agent: Chất lượng của dữ liệu ảnh hưởng trực tiếp đến khả năng retrieval (truy xuất) và chất lượng phản hồi của RAG. Dữ liệu bị lỗi (corrupted) làm `retrieval_hit_rate` giảm từ 1.0 xuống 0.5 dù pipeline không báo lỗi, và chỉ khi có quy trình phục hồi (repair) hiệu quả, hệ thống mới có thể duy trì được độ ổn định so với baseline.
 
 ### Nếu có thêm thời gian
 
-[Nêu một cải thiện cụ thể, lý do và cách đo cải thiện đó.]
+Em sẽ thêm vào quality gate một kiểm tra so với lần chạy trước: FAIL khi số dòng giảm quá 10% hoặc `latest_published` bị lùi. Lý do: lỗi `drop_latest_records` gây toàn bộ 5 lượt retrieval miss nhưng hiện không có check nào bắt được. Cách đo: chạy lại `run_corruption_flow.py`, kỳ vọng check mới FAIL ở corrupted (21 so với 24 dòng; 2026-06-11 so với 2026-07-22) và PASS ở baseline/repaired.
 
 ## 10. Cam kết của thành viên
 
