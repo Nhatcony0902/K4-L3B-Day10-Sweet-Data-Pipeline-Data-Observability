@@ -49,7 +49,12 @@
   - `src/ingestion/cleaning.py`: `build_clean_dataframe` (bỏ thẻ JATS, chuẩn hóa text, `age_days`, dedupe theo `paper_id`, `text_for_embedding`).
   - `src/observability/quality.py`: Quality Gate Great Expectations 1.x (4 expectations bắt buộc) + Freshness SLA (`age_days > 180`, cảnh báo khi > 25% bài cũ).
   - Quản lý repo nhánh `main`, `report/group_report.md`.
-- **Trạng thái:** _(cập nhật khi hoàn thành — ghi rõ phần xong / thử nghiệm / blocker)_
+- **Trạng thái:**
+  - ✅ CP0 `crossref.py` — `Tín hiệu hoàn thành: Đã tải 24 bài báo`; fallback 429/offline đã kiểm thử (commit `1135634`).
+  - ✅ CP1 `cleaning.py` — `Clean thành công 24 dòng`; artifact `data/clean/papers_clean.{csv,json}` (commit `5723818`).
+  - ✅ CP1 `quality.py` — `Quality check status = True`, 6/6 expectation pass, freshness 1/24 bài cũ → `is_fresh = True`; artifact `data/quality/test_quality_report.json` (commit `4ac6bdf`).
+  - ⏳ `report/group_report.md` — chờ số liệu phase1 và corruption flow.
+- **Báo cáo chi tiết:** `report/2A202602844_PhamLongNhat.md`
 - **Điều học được / Đóng góp chính:** _(tự điền)_
 
 ### ## TranXuanDuc-2A202602768
