@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+import html
 import json
 from pathlib import Path
 import re
@@ -36,6 +37,15 @@ def now_utc() -> datetime:
 
 def normalize_whitespace(value: str) -> str:
     return re.sub(r"\s+", " ", value).strip()
+
+
+def clean_markup_text(value: object) -> str:
+    """Bo tieu de (`<jats:title>Abstract</jats:title>`, `<title>`), cac the JATS/HTML (vd `<jats:p>`),
+    giai ma HTML entity va gop khoang trang."""
+    if not isinstance(value, str):
+        return ""
+    without_titles = re.sub(r"<(?:jats:)?title>.*?</(?:jats:)?title>", " ", value, flags=re.DOTALL)
+    return normalize_whitespace(html.unescape(re.sub(r"<[^>]+>", " ", without_titles)))
 
 
 def safe_slug(value: str) -> str:
