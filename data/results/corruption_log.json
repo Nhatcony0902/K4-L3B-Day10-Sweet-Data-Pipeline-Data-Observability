@@ -1,0 +1,156 @@
+{
+  "generated_at": "2026-09-26T04:33:26.997774+00:00",
+  "seed": 42,
+  "input_rows": 24,
+  "output_rows": 21,
+  "corruption_counts": {
+    "drop_latest_records": 5,
+    "blank_summary": 3,
+    "inject_noise": 3,
+    "truncate_title": 3,
+    "stale_date": 4,
+    "duplicate_rows": 2
+  },
+  "entries": [
+    {
+      "corruption": "drop_latest_records",
+      "paper_id": "10.1145/3637528.3671812",
+      "field": null,
+      "before": "2026-07-22",
+      "after": "dropped"
+    },
+    {
+      "corruption": "drop_latest_records",
+      "paper_id": "10.1145/3637528.3671808",
+      "field": null,
+      "before": "2026-07-19",
+      "after": "dropped"
+    },
+    {
+      "corruption": "drop_latest_records",
+      "paper_id": "10.1145/3637528.3671804",
+      "field": null,
+      "before": "2026-07-05",
+      "after": "dropped"
+    },
+    {
+      "corruption": "drop_latest_records",
+      "paper_id": "10.1145/3637528.3671807",
+      "field": null,
+      "before": "2026-06-25",
+      "after": "dropped"
+    },
+    {
+      "corruption": "drop_latest_records",
+      "paper_id": "10.1145/3637528.3671802",
+      "field": null,
+      "before": "2026-06-12",
+      "after": "dropped"
+    },
+    {
+      "corruption": "blank_summary",
+      "paper_id": "10.1145/3637528.3671811",
+      "field": "summary",
+      "before": "Dense vector search excels at conceptual similarity but struggles with exact acronyms and serial numbers. Reciprocal Rank Fusion of sparse lexical scores and dense embeddings achieves optimal recall.",
+      "after": ""
+    },
+    {
+      "corruption": "blank_summary",
+      "paper_id": "10.1145/3637528.3671816",
+      "field": "summary",
+      "before": "An extended empirical study on e define freshness service-level agreements (SLAs) for temporal document ingestion. By tracking document age and update cadence, our orchestrator dynamically prioritizes recrawling high-churn technical corpora Further analysis on scaling parameters.",
+      "after": ""
+    },
+    {
+      "corruption": "blank_summary",
+      "paper_id": "10.1145/3637528.3671803",
+      "field": "summary",
+      "before": "Soft-deletions in vector databases leave orphaned embeddings that lead to hallucinations. This paper designs an idempotent index synchronization protocol that guarantees complete purges of outdated vector artifacts.",
+      "after": ""
+    },
+    {
+      "corruption": "inject_noise",
+      "paper_id": "10.1145/3637528.3671818",
+      "field": "summary",
+      "before": "An extended empirical study on onnecting LLMs directly to raw warehouse tables often results in schema misunderstandings. A governed semantic layer standardizes business metric definitions, dramatically boosting SQL generation accuracy Further analysis on scaling parameters.",
+      "after": "???? An extended empirical study on onnecting LLMs directly to raw warehouse tables often results in schema misunderstandings. NULL A governed semantic layer standardizes business metric definitions, dramatically boosting SQL generation accuracy Further analysis on scaling parameters. 0xDEADBEEF"
+    },
+    {
+      "corruption": "inject_noise",
+      "paper_id": "10.1145/3637528.3671813",
+      "field": "summary",
+      "before": "An extended empirical study on etrieval-Augmented Generation (RAG) significantly improves large language model accuracy by grounding responses in retrieved passages. We explore agentic multi-hop reasoning and routing across heterogeneous vector indices Further analysis on scaling parameters.",
+      "after": "lorem_ipsum_xyz An extended empirical study on etrieval-Augmented Generation (RAG) significantly improves large language model accuracy by grounding responses in #@!$%^&* retrieved passages. We explore agentic multi-hop reasoning and routing across heterogeneous vector indices Further analysis on scaling parameters. 0xDEADBEEF"
+    },
+    {
+      "corruption": "inject_noise",
+      "paper_id": "10.1145/3637528.3671815",
+      "field": "summary",
+      "before": "An extended empirical study on oft-deletions in vector databases leave orphaned embeddings that lead to hallucinations. This paper designs an idempotent index synchronization protocol that guarantees complete purges of outdated vector artifacts Further analysis on scaling parameters.",
+      "after": "???? An extended empirical study on oft-deletions in vector databases leave orphaned embeddings that lead to hallucinations. This paper 0xDEADBEEF designs an idempotent index synchronization protocol that guarantees complete purges of outdated vector artifacts Further analysis on scaling parameters. #@!$%^&*"
+    },
+    {
+      "corruption": "truncate_title",
+      "paper_id": "10.1145/3637528.3671819",
+      "field": "title",
+      "before": "Advanced Perspectives on Synthetic Corruption Testing: Stress-Testing Vector Search Robustness",
+      "after": "Advance"
+    },
+    {
+      "corruption": "truncate_title",
+      "paper_id": "10.1145/3637528.3671805",
+      "field": "title",
+      "before": "Evaluating Retrieval Precision with Token F1 and LLM Judges",
+      "after": "Evaluat"
+    },
+    {
+      "corruption": "truncate_title",
+      "paper_id": "10.1145/3637528.3671821",
+      "field": "title",
+      "before": "Advanced Perspectives on Chunking Strategies for Technical Documentation Retrieval",
+      "after": "Advance"
+    },
+    {
+      "corruption": "stale_date",
+      "paper_id": "10.1145/3637528.3671824",
+      "field": "published",
+      "before": "2026-06-12",
+      "after": "2025-06-12"
+    },
+    {
+      "corruption": "stale_date",
+      "paper_id": "10.1145/3637528.3671806",
+      "field": "published",
+      "before": "2026-05-02",
+      "after": "2025-05-02"
+    },
+    {
+      "corruption": "stale_date",
+      "paper_id": "10.1145/3637528.3671820",
+      "field": "published",
+      "before": "2026-06-08",
+      "after": "2025-06-08"
+    },
+    {
+      "corruption": "stale_date",
+      "paper_id": "10.1145/3637528.3671814",
+      "field": "published",
+      "before": "2026-06-02",
+      "after": "2025-06-02"
+    },
+    {
+      "corruption": "duplicate_rows",
+      "paper_id": "10.1145/3637528.3671822",
+      "field": null,
+      "before": 1,
+      "after": 2
+    },
+    {
+      "corruption": "duplicate_rows",
+      "paper_id": "10.1145/3637528.3671810",
+      "field": null,
+      "before": 1,
+      "after": 2
+    }
+  ]
+}
